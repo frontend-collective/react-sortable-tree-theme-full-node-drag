@@ -13,7 +13,7 @@ function isDescendant(older, younger) {
 }
 
 // eslint-disable-next-line react/prefer-stateless-function
-class FileThemeNodeContentRenderer extends Component {
+class CustomThemeNodeContentRenderer extends Component {
   render() {
     const {
       scaffoldBlockPxWidth,
@@ -25,6 +25,7 @@ class FileThemeNodeContentRenderer extends Component {
       canDrag,
       node,
       title,
+      subtitle,
       draggedNode,
       path,
       treeIndex,
@@ -46,72 +47,105 @@ class FileThemeNodeContentRenderer extends Component {
       ...otherProps
     } = this.props;
     const nodeTitle = title || node.title;
+    const nodeSubtitle = subtitle || node.subtitle;
 
     const isDraggedDescendant = draggedNode && isDescendant(draggedNode, node);
     const isLandingPadActive = !didDrop && isDragging;
 
-    // Construct the scaffold representing the structure of the tree
-    const scaffold = [];
-    lowerSiblingCounts.forEach((lowerSiblingCount, i) => {
-      scaffold.push(
-        <div
-          key={`pre_${1 + i}`}
-          style={{ width: scaffoldBlockPxWidth }}
-          className={styles.lineBlock}
-        />
-      );
-
-      if (treeIndex !== listIndex && i === swapDepth) {
-        // This row has been shifted, and is at the depth of
-        // the line pointing to the new destination
-        let highlightLineClass = '';
-
-        if (listIndex === swapFrom + swapLength - 1) {
-          // This block is on the bottom (target) line
-          // This block points at the target block (where the row will go when released)
-          highlightLineClass = styles.highlightBottomLeftCorner;
-        } else if (treeIndex === swapFrom) {
-          // This block is on the top (source) line
-          highlightLineClass = styles.highlightTopLeftCorner;
-        } else {
-          // This block is between the bottom and top
-          highlightLineClass = styles.highlightLineVertical;
+    const nodeContent = connectDragPreview(
+      <div
+        className={
+          styles.row +
+          (isLandingPadActive ? ` ${styles.rowLandingPad}` : '') +
+          (isLandingPadActive && !canDrop ? ` ${styles.rowCancelPad}` : '') +
+          (isSearchMatch ? ` ${styles.rowSearchMatch}` : '') +
+          (isSearchFocus ? ` ${styles.rowSearchFocus}` : '') +
+          (className ? ` ${className}` : '')
         }
+        style={{
+          opacity: isDraggedDescendant ? 0.5 : 1,
+          ...style,
+        }}
+      >
+        <div
+          className={
+            styles.rowContents +
+            (!canDrag ? ` ${styles.rowContentsDragDisabled}` : '')
+          }
+        >
+          <div className={styles.rowLabel}>
+            <span
+              className={
+                styles.rowTitle +
+                (node.subtitle ? ` ${styles.rowTitleWithSubtitle}` : '')
+              }
+            >
+              {typeof nodeTitle === 'function'
+                ? nodeTitle({
+                    node,
+                    path,
+                    treeIndex,
+                  })
+                : nodeTitle}
+            </span>
 
-        scaffold.push(
-          <div
-            key={`highlight_${1 + i}`}
-            style={{
-              width: scaffoldBlockPxWidth,
-              left: scaffoldBlockPxWidth * i,
-            }}
-            className={`${styles.absoluteLineBlock} ${highlightLineClass}`}
-          />
-        );
-      }
-    });
+            {nodeSubtitle && (
+              <span className={styles.rowSubtitle}>
+                {typeof nodeSubtitle === 'function'
+                  ? nodeSubtitle({
+                      node,
+                      path,
+                      treeIndex,
+                    })
+                  : nodeSubtitle}
+              </span>
+            )}
+          </div>
 
-    const nodeContent = (
+          <div className={styles.rowToolbar}>
+            {buttons.map((btn, index) => (
+              <div
+                key={index} // eslint-disable-line react/no-array-index-key
+                className={styles.toolbarButton}
+              >
+                {btn}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
       <div style={{ height: '100%' }} {...otherProps}>
         {toggleChildrenVisibility &&
           node.children &&
-          node.children.length > 0 && (
-            <button
-              type="button"
-              aria-label={node.expanded ? 'Collapse' : 'Expand'}
-              className={
-                node.expanded ? styles.collapseButton : styles.expandButton
-              }
-              style={{
-                left: (lowerSiblingCounts.length - 0.7) * scaffoldBlockPxWidth,
-              }}
-              onClick={() =>
-                toggleChildrenVisibility({
-                  node,
-                  path,
-                  treeIndex,
-                })}
-            />
+          (node.children.length > 0 || typeof node.children === 'function') && (
+            <div>
+              <button
+                type="button"
+                aria-label={node.expanded ? 'Collapse' : 'Expand'}
+                className={
+                  node.expanded ? styles.collapseButton : styles.expandButton
+                }
+                style={{ left: -0.5 * scaffoldBlockPxWidth }}
+                onClick={() =>
+                  toggleChildrenVisibility({
+                    node,
+                    path,
+                    treeIndex,
+                  })
+                }
+              />
+
+              {node.expanded &&
+                !isDragging && (
+                  <div
+                    style={{ width: scaffoldBlockPxWidth }}
+                    className={styles.lineChildren}
+                  />
+                )}
+            </div>
           )}
 
         <div
@@ -120,79 +154,16 @@ class FileThemeNodeContentRenderer extends Component {
             (!canDrag ? ` ${styles.rowWrapperDragDisabled}` : '')
           }
         >
-          {/* Set the row preview to be used during drag and drop */}
-          {connectDragPreview(
-            <div style={{ display: 'flex' }}>
-              {scaffold}
-              <div
-                className={
-                  styles.row +
-                  (isLandingPadActive ? ` ${styles.rowLandingPad}` : '') +
-                  (isLandingPadActive && !canDrop
-                    ? ` ${styles.rowCancelPad}`
-                    : '') +
-                  (isSearchMatch ? ` ${styles.rowSearchMatch}` : '') +
-                  (isSearchFocus ? ` ${styles.rowSearchFocus}` : '') +
-                  (className ? ` ${className}` : '')
-                }
-                style={{
-                  opacity: isDraggedDescendant ? 0.5 : 1,
-                  ...style,
-                }}
-              >
-                <div
-                  className={
-                    styles.rowContents +
-                    (!canDrag ? ` ${styles.rowContentsDragDisabled}` : '')
-                  }
-                >
-                  <div className={styles.rowToolbar}>
-                    {icons.map((icon, index) => (
-                      <div
-                        key={index} // eslint-disable-line react/no-array-index-key
-                        className={styles.toolbarButton}
-                      >
-                        {icon}
-                      </div>
-                    ))}
-                  </div>
-                  <div className={styles.rowLabel}>
-                    <span className={styles.rowTitle}>
-                      {typeof nodeTitle === 'function'
-                        ? nodeTitle({
-                            node,
-                            path,
-                            treeIndex,
-                          })
-                        : nodeTitle}
-                    </span>
-                  </div>
-
-                  <div className={styles.rowToolbar}>
-                    {buttons.map((btn, index) => (
-                      <div
-                        key={index} // eslint-disable-line react/no-array-index-key
-                        className={styles.toolbarButton}
-                      >
-                        {btn}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {canDrag
+            ? connectDragSource(nodeContent, { dropEffect: 'copy' })
+            : nodeContent}
         </div>
       </div>
     );
-
-    return canDrag
-      ? connectDragSource(nodeContent, { dropEffect: 'copy' })
-      : nodeContent;
   }
 }
 
-FileThemeNodeContentRenderer.defaultProps = {
+CustomThemeNodeContentRenderer.defaultProps = {
   buttons: [],
   canDrag: false,
   canDrop: false,
@@ -203,6 +174,7 @@ FileThemeNodeContentRenderer.defaultProps = {
   isSearchMatch: false,
   parentNode: null,
   style: {},
+  subtitle: null,
   swapDepth: null,
   swapFrom: null,
   swapLength: null,
@@ -210,7 +182,7 @@ FileThemeNodeContentRenderer.defaultProps = {
   toggleChildrenVisibility: null,
 };
 
-FileThemeNodeContentRenderer.propTypes = {
+CustomThemeNodeContentRenderer.propTypes = {
   buttons: PropTypes.arrayOf(PropTypes.node),
   canDrag: PropTypes.bool,
   className: PropTypes.string,
@@ -225,6 +197,7 @@ FileThemeNodeContentRenderer.propTypes = {
   ).isRequired,
   scaffoldBlockPxWidth: PropTypes.number.isRequired,
   style: PropTypes.shape({}),
+  subtitle: PropTypes.oneOfType([PropTypes.func, PropTypes.node]),
   swapDepth: PropTypes.number,
   swapFrom: PropTypes.number,
   swapLength: PropTypes.number,
@@ -246,4 +219,4 @@ FileThemeNodeContentRenderer.propTypes = {
   isOver: PropTypes.bool.isRequired,
 };
 
-export default FileThemeNodeContentRenderer;
+export default CustomThemeNodeContentRenderer;
