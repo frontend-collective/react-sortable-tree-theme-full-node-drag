@@ -7,4 +7,4 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* change theme to full-node drag theme ([eb30848](https://github.com/fritz-c/react-sortable-tree-theme-full-node-drag/commit/eb30848))
+* change theme to full-node drag theme ([eb30848](https://github.com/frontend-collective/react-sortable-tree-theme-full-node-drag/commit/eb30848))
