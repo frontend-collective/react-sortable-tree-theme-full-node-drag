@@ -44,6 +44,7 @@ class CustomThemeNodeContentRenderer extends Component {
       treeId, // Not needed, but preserved for other renderers
       isOver, // Not needed, but preserved for other renderers
       parentNode, // Needed for dndManager
+      rowDirection,
       ...otherProps
     } = this.props;
     const nodeTitle = title || node.title;
@@ -205,7 +206,8 @@ CustomThemeNodeContentRenderer.propTypes = {
   toggleChildrenVisibility: PropTypes.func,
   treeIndex: PropTypes.number.isRequired,
   treeId: PropTypes.string.isRequired,
-
+  rowDirection: PropTypes.string.isRequired,
+  
   // Drag and drop API functions
   // Drag source
   connectDragPreview: PropTypes.func.isRequired,
