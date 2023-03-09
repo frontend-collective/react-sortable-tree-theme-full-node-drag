@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const autoprefixer = require('autoprefixer');
 const nodeExternals = require('webpack-node-externals');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const target = process.env.TARGET || 'umd';
 
@@ -47,15 +48,10 @@ const config = {
   plugins: [
     new webpack.EnvironmentPlugin({ NODE_ENV: 'development' }),
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false,
-      },
-      mangle: false,
-      beautify: true,
-      comments: true,
-    }),
   ],
+  optimization: {
+    minimize: false,
+  },
   module: {
     rules: [
       {
@@ -65,13 +61,13 @@ const config = {
       },
       {
         test: /\.scss$/,
-        use: [styleLoader, cssLoader(true), postcssLoader, 'sass-loader'],
+        use: [process.env.NODE_ENV !== 'production' ? styleLoader : MiniCssExtractPlugin.loader, cssLoader(true), postcssLoader, 'sass-loader'],
         exclude: path.join(__dirname, 'node_modules'),
       },
       {
         // Used for importing css from external modules (react-virtualized, etc.)
         test: /\.css$/,
-        use: [styleLoader, cssLoader(false), postcssLoader],
+        use: [process.env.NODE_ENV !== 'production' ? styleLoader : MiniCssExtractPlugin.loader, cssLoader(false), postcssLoader],
       },
     ],
   },
@@ -85,6 +81,12 @@ switch (target) {
         // load non-javascript files with extensions, presumably via loaders
         whitelist: [/\.(?!(?:jsx?|json)$).{1,5}$/i],
       }),
+    ];
+    config.optimization.minimize = true;
+    config.plugins = [
+      new MiniCssExtractPlugin(),
+      new webpack.EnvironmentPlugin({ NODE_ENV: 'production' }),
+      new webpack.optimize.OccurrenceOrderPlugin(),
     ];
     break;
   case 'development':
@@ -125,17 +127,13 @@ switch (target) {
       path: path.join(__dirname, 'build'),
       filename: 'static/[name].js',
     };
+    config.optimization.minimize = true;
     config.plugins = [
       new HtmlWebpackPlugin({
         inject: true,
         template: './demo/index.html',
       }),
       new webpack.EnvironmentPlugin({ NODE_ENV: 'production' }),
-      new webpack.optimize.UglifyJsPlugin({
-        compress: {
-          warnings: false,
-        },
-      }),
     ];
 
     break;
